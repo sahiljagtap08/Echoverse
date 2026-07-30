@@ -1,0 +1,49 @@
+[project]
+name = "synthetic-env-harness"
+version = "0.1.0"
+description = "Standalone harness to launch synthetic environments and verify agent tasks."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "openai>=1.0.0",
+    "requests>=2.28.0",
+    "python-dotenv>=1.0.0",
+    # The LLM verifier authenticates to Azure OpenAI via DefaultAzureCredential
+    # (`az login` / managed identity) when no API key is set — the common setup
+    # for the judge — so azure-identity ships as a core dependency. (The `azure`
+    # extra below is kept for back-compat.)
+    "azure-identity>=1.15.0",
+]
+
+[project.optional-dependencies]
+# Azure AD (Entra ID) authentication for the LLM verifier — lets the judge
+# authenticate to Azure OpenAI via DefaultAzureCredential (`az login` / managed
+# identity) instead of an API key.
+azure = ["azure-identity>=1.15.0"]
+# The released Fara1.5 reference agent (`harness.agents.fara15`, used via
+# `harness.run_agent --agent fara15`). Pulls the public, open-source
+# `microsoft/fara` package (which brings Playwright) so you can drive the envs
+# with Fara1.5 out of the box. Optional: the core harness is agent-agnostic and
+# does not need this. fara is not on PyPI (research preview), so it is git-pinned
+# for reproducibility — bump the pin to pick up upstream fixes. After installing
+# this extra, download a browser once: `python -m playwright install chromium`.
+fara = [
+    "fara @ git+https://github.com/microsoft/fara.git@a675d6d61c41c47ae87bacefeab22caad18e3e84",
+]
+
+[project.scripts]
+synthenv-run = "harness.run_env:main"
+synthenv-verify = "harness.verify_cli:main"
+synthenv-run-agent = "harness.run_agent:main"
+
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+# pyproject.toml lives INSIDE the package directory, so map the top-level
+# ``harness`` package to this directory; subpackages resolve relative to it.
+# Without this, `pip install -e harness` fails with "package directory 'harness'
+# does not exist".
+package-dir = {"harness" = "."}
+packages = ["harness", "harness.agents", "harness.eval"]
